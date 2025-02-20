@@ -69,6 +69,11 @@ if (!require(groundhog)) {
   require(groundhog)
 }
 
+if (!require(here)) {
+  install.packages("here")
+  require(here)
+}
+
 # this date will be used to determine the versions of R and your packages
 # it is best practice to keep R and its packages up to date
 groundhog.day <- "2025-02-01"
