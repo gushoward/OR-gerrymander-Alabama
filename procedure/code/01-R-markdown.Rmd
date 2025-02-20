@@ -10,18 +10,6 @@ knit: (function(inputFile, encoding) {
   rmarkdown::render(inputFile, encoding = encoding, output_dir = "../../docs/report") })
 ---
 
-# Abstract
-
-Write a brief abstract about your research project.
-
-If the project is a reproduction or replication study, include a declaration of the study type with a full reference to the original study.
-For example:
-
-This study is a *replication* of:
-
-> citation to prior study
-
-A graphical abstract of the study could also be included as an image here.
 
 # Study metadata
 
@@ -32,6 +20,23 @@ A graphical abstract of the study could also be included as an image here.
 - `Spatial Reference System`: EPSG 4269 NAD 1983 geographic coordinate system
 - `Temporal Coverage`: precincts used for tabulating the 2020 census
 - `Temporal Resolution`: annual election
+
+- `Title`: Voting Districts 2020
+- `Abstract`: Congressional Districts
+- `Spatial Coverage`: Alabama
+- `Spatial Resolution`: US Congressional Districts
+- `Spatial Reference System`: EPSG 3857 WGS 1984 Web Mercator projection
+- `Temporal Coverage`: Districts approved in 2023 for 2024
+- `Temporal Resolution`: annual election
+
+- `Title`: Block Groups 2020
+- `Abstract`: Vector polygon geopackage layer of 2020 Census Block Groups and demographic data
+- `Spatial Coverage`: Alabama
+- `Spatial Resolution`: Census Block Groups
+- `Spatial Reference System`: EPSG 4269 NAD 1983 geographic coordinate system
+- `Temporal Coverage`: 2020 Census
+- `Temporal Resolution`: 2020 Census
+
 
 # Study design
 
@@ -105,24 +110,43 @@ knitr::opts_chunk$set(
 )
 ```
 
-## Data and variables
+## Data Sources
 
 We plan on using data sources..., ..., ..
 
+# Variables
+Precincts 2020
+- VTDST20: Voting district ID
+- GEOID20: Unique geographic ID
+- G20PRETRU: Total vote for trump in 2020
+- G20PREBID: Total votes for Biden in 2020
+
+US Congressional districts
+- DISTRICT: US Congressional District Number
+- POPULATION: Total Population (2020 census)
+- WHITE: total white population (2020 census)
+- BLACK: total Black or African American population (2020 census)
+
+Block Groups
+- GEOID: code to uniquely identify tracts
+- P4_001N: Total Population, 18 years or older
+- P4_006N: Total: Not Hispanic or Latino, Population of one race, Black or African American alone, 18 years or older
+- P5_003N:Total institutionalized population in correctional facilities for adults, 18 years or older
+
 ## precints 2020
 
-copy metadata for precincts 2020 here.
-
 write code to read in precincts20.md into this document
+```{r}
+districts <- read_sf("districts.gpkg")
+
+censusblocks <- read_sf("block_groups.gpkg")
+```
 
 
 ## Prior observations  
 
-Prior experience with the study area, prior data collection, or prior observation of the data can compromise the validity of a study, e.g. through p-hacking.
-Therefore, disclose any prior experience or observations at the time of study pre-registration here, with example text below:
-
-At the time of this study pre-registration, the authors had _____ prior knowledge of the geography of the study region with regards to the ____ phenomena to be studied.
-This study is related to ____ prior studies by the authors
+At the time of this study pre-registration, the author had little prior knowledge of the geography of the study region with regards to the gerrymandering phenomena to be studied.
+This study is related to no prior studies by the author.
 
 For each primary data source, declare the extent to which authors had already engaged with the data:
 
@@ -196,15 +220,11 @@ Describe how the results are to be interpreted *vis a vis* each hypothesis or re
 
 # Integrity Statement
 
-Include an integrity statement - The authors of this preregistration state that they completed this preregistration to the best of their knowledge and that no other preregistration exists pertaining to the same hypotheses and research.
+The authors of this preregistration state that they completed this preregistration to the best of their knowledge and that no other preregistration exists pertaining to the same hypotheses and research.
 If a prior registration *does* exist, explain the rationale for revising the registration here.
 
 # Acknowledgements
 
-- `Funding Name`: name of funding for the project
-- `Funding Title`: title of project grant
-- `Award info URI`: web address for award information
-- `Award number`: award number
 
 This report is based upon the template for Reproducible and Replicable Research in Human-Environment and Geographical Sciences, DOI:[10.17605/OSF.IO/W29MQ](https://doi.org/10.17605/OSF.IO/W29MQ)
 
