@@ -137,58 +137,232 @@ Block Groups
 
 write code to read in precincts20.md into this document
 ```{r}
-districts <- read_sf("districts.gpkg")
+# here("Users","gushoward","Downloads","OR-gerrtmandere-Alabama","data","raw","public","alabama")
+
+districts <- read_sf(here("data","raw","public","alabama","districts.gpkg"))
+
+setwd()
 
 censusblocks <- read_sf("block_groups.gpkg")
 ```
 
 
+## Census
+```{r}
+census_metadata_file <- here("data", "metadata", "census2020pl_vars.csv")
+if(file.exists(census_metadata_file)){
+  census2020pl_vars <- read.csv(census_metadata_file)
+} else {
+  census2020pl_vars <- load_variables(2020, "pl")
+  write.csv(census2020pl_vars, here("data", "metadata", "census2020pl_vars.csv"))
+}
+```
+
+### block group
+```{r message=FALSE, warning=FALSE}
+blockgroup_file <- here("data", "raw", "public", "block_groups.gpkg")
+
+# if the data is already downloaded, just load it
+# otherwise, query from the census and save
+if(file.exists(blockgroup_file)){
+  blockgroups <- st_read(blockgroup_file)
+} else {
+  blockgroups <- get_decennial(geography = "block group",
+                               sumfile = "pl",
+                               table = "P3",
+                               year = 2020,
+                               state = "Alabama",
+                               output = "wide",
+                               geometry = TRUE,
+                               keep_geo_vars = TRUE)
+  st_write(blockgroups, blockgroup_file)
+}
+```
+
+### census variables
+```{r}
+black_vars <- census2020pl_vars |> 
+  dplyr::filter(str_detect(name, "P3"),
+                str_detect(label, "Black")) |> 
+  select(-concept)
+
+black_vars |> kable()
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+blockgroups_calc <- blockgroups |> 
+  rowwise() |> 
+  mutate(Black = sum(c_across(all_of(black_vars$name)))) |> 
+  ungroup() |> 
+  mutate(Total = P3_001N,
+         PctBlack = Black / Total * 100,
+         CheckPct = (Black + P3_003N) / Total * 100) |> 
+  # select(GEOID, Black, Total, PctBlack, CheckPct) |> 
+  # mutate(bgarea = st_area(geom))
+  select(GEOID, Black, Total, PctBlack, CheckPct)
+```
+
+
+
+```{r eval=FALSE}
+st_write(blockgroups_calc, 
+         here("data", "derived", "public", "blockgroups_calc.gpkg"),
+         append=FALSE)
+```
+
+Map the percentage of the population 18 or over that is Black or African American.
+```{r}
+blkgrp_black <- blockgroups_calc |> 
+  tm_shape() + 
+tm_shape(blockgroups_calc) + 
+  tm_polygons(
+    fill = "PctBlack",
+    col_alpha = 0.2,
+    lwd = 0.1,
+    col = "grey90"
+  )
+
+blkgrp_black
+```
+
+## Districts
+```{r error=FALSE}
+districts_file <- here("data", "raw", "public", "districts.gpkg")
+st_layers(districts_file)
+```
+
+```{r}
+districts21 <- st_read(districts_file, layer = "districts21")
+```
+
+
+```{r}
+districts21 <- districts21 |> st_transform(4269) |> 
+  mutate(pctBlack = round(BLACK / POPULATION * 100, 1))
+```
+
+Districts & black population
+
+```{r}
+tmap_mode(mode = "view")
+blkgrp_black +
+  tm_shape(districts21_results) +
+  tm_polygons(col = "red",
+              fill_alpha = 0,
+              lwd = 2) +
+  tm_text("DISTRICT",
+          col = "red")
+```
+
+populations and bgs
+```{r warning=FALSE}
+districts21_estimates <- st_intersection(blockgroups_calc, districts21) |> 
+  mutate(
+    awTot = Total * as.numeric(st_area(geom) / bgarea),
+    awBlack = Black * as.numeric(st_area(geom) / bgarea)
+  ) |> 
+  st_drop_geometry() |> 
+  group_by(DISTRICT) |> 
+  summarize(bgTotal = sum(awTot),
+            bgBlack = sum(awBlack))
+
+districts21_join_bg <- districts21 |> 
+  left_join(districts21_estimates, by = "DISTRICT") |> 
+  mutate(pctBlackbg = round(bgBlack / bgTotal * 100, 1))
+```
+
+```{r}
+districts21_join_bg |> st_drop_geometry() |> kable()
+```
+
+blck pct
+```{r warning=FALSE}
+districts21_estimates <- st_intersection(blockgroups_calc, st_convex_hull(districts21)) |> 
+  mutate(
+    awTot = Total * as.numeric(st_area(geom) / bgarea),
+    awBlack = Black * as.numeric(st_area(geom) / bgarea)
+  ) |> 
+  st_drop_geometry() |> 
+  group_by(DISTRICT) |> 
+  summarize(chTotal = sum(awTot),
+            chBlack = sum(awBlack))
+```
+
+```{r}
+districts21_join_ch <- districts21_join_bg |> 
+  left_join(districts21_estimates, by = "DISTRICT") |> 
+  mutate(pctBlackch = round(chBlack / chTotal * 100, 1),
+         diffPct = pctBlackbg - pctBlackch,
+         absdiffPct = abs(diffPct))
+```
+
+Calculate compactness scores.
+To knit, will we need to replace `st_perimeter()` with `st_length(st_cast(st_cast(geom, "POLYGON"), "LINESTRING")`?
+
+```{r}
+districts21_results <- districts21_join_ch |> 
+  mutate(
+    darea = st_area(geom),
+    compact_shp = round( as.numeric((4 * pi * darea) / st_perimeter(geom)^2), 2)
+  )
+```
+
+Calculate compactness by comparing to the convex hull.
+
+```{r}
+districts21_results <- districts21_results |> 
+  mutate(
+    compact_hull = round( as.numeric(darea / st_area(st_convex_hull(geom))), 2)
+  )
+```
+
+Calculate compactness by comparing to the minimum bounding circle.
+This operation takes some time to run.
+
+```{r}
+districts21_results <- districts21_results |> 
+  mutate(
+    compact_circ = round( as.numeric(darea / st_area(st_minimum_bounding_circle(geom))), 2)
+  )
+```
+
+### Plot representational difference against compactness
+
+
+```{r}
+districts21_results |> 
+  st_drop_geometry() |> 
+  select(absdiffPct, compact_shp, compact_hull, compact_circ) |> 
+  cor() |> kable(digits = 2)
+```
+
+
+```{r}
+tm_shape(districts21_results) +
+  tm_polygons(fill = "pctBlackbg") +
+  tm_text("DISTRICT")
+```
+
+
+
+
 ## Prior observations  
 
 At the time of this study pre-registration, the author had little prior knowledge of the geography of the study region with regards to the gerrymandering phenomena to be studied.
-This study is related to no prior studies by the author.
-
-For each primary data source, declare the extent to which authors had already engaged with the data:
-
-- [ ] no data collection has started
-- [ ] pilot test data has been collected
-- [ ] data collection is in progress and data has not been observed
-- [ ] data collection is in progress and __% of data has been observed
-- [ ] data collection is complete and data has been observed. Explain how authors have already manipulated / explored the data.
-
-For each secondary source, declare the extent to which authors had already engaged with the data:
-
-- [ ] data is not available yet
-- [ ] data is available, but only metadata has been observed
-- [ ] metadata and descriptive statistics have been observed
-- [ ] metadata and a pilot test subset or sample of the full dataset have been observed
-- [ ] the full dataset has been observed. Explain how authors have already manipulated / explored the data.
-
-If pilot test data has been collected or acquired, describe how the researchers observed and analyzed the pilot test, and the extent to which the pilot test influenced the research design.
+This study is related to one prior study by the author, in which the compactness of Alabama's voting districts was calculated, as well as voting statistics in relation to race.
 
 ## Bias and threats to validity
 
-Given the research design and primary data to be collected and/or secondary data to be used, discuss common threats to validity and the approach to mitigating those threats, with an emphasis on geographic threats to validity.
-
-These include:
-
 MAUP and Scale may affect these results.
 
-  - uneven primary data collection due to geographic inaccessibility or other constraints
-  - multiple hypothesis testing
-  - edge or boundary effects
-  - the modifiable areal unit problem
-  - nonstationarity
-  - spatial dependence or autocorrelation
-  - temporal dependence or autocorrelation
-  - spatial scale dependency
-  - spatial anisotropies
-  - confusion of spatial and a-spatial causation
-  - ecological fallacy
-  - uncertainty e.g. from spatial disaggregation, anonymization, differential privacy
+Given the boundaries of this study are essential to the analysis, the Modifiable Areal Unit problem will certainly have relevant impacts. The constantly changing boundaries of voting precincts can impact both visualization of the data, as well as the analysis of it. The scale and shape of the units used has the potential to alter the data used in the study.
 
 ## Data transformations
 
+```{r}
+
+```
 
 
 Describe all data transformations planned to prepare data sources for analysis.
