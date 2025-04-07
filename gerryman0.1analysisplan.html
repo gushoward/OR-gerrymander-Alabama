@@ -1,14 +1,21 @@
 ---
-title: "Gerrymandering in Alabama"
-author: "Gus Howard"
-date: "`r Sys.Date()`"
+title: "gerrymander-alabama"
+output: html_document
+date: "2025-02-24"
 output: html_document
 editor_options:
   markdown:
     wrap: sentence
 knit: (function(inputFile, encoding) {
-  rmarkdown::render(inputFile, encoding = encoding, output_dir = "../../docs/report") })
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "../../docs") })
+nocite: '@*'
+bibliography: "../../software.bib"
 ---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
 
 
 # Study metadata
@@ -58,7 +65,7 @@ I Plan on using package.... for...
 # record all the packages you are using here
 # this includes any calls to library(), require(),
 # and double colons such as here::i_am()
-packages <- c("tidyverse", "here", "sf", "tmap", "tidycensus", "kableExtra")
+packages <- c("tidyverse", "here", "sf", "tmap", "tidycensus")
 
 # force all conflicts to become errors
 # if you load dplyr and use filter(), R has to guess whether you mean dplyr::filter() or stats::filter()
@@ -112,7 +119,9 @@ knitr::opts_chunk$set(
 
 ## Data Sources
 
-### Variables
+We plan on using data sources..., ..., ..
+
+# Variables
 Precincts 2020
 - VTDST20: Voting district ID
 - GEOID20: Unique geographic ID
@@ -135,13 +144,13 @@ Block Groups
 
 write code to read in precincts20.md into this document
 ```{r}
-# # here("Users","gushoward","Downloads","OR-gerrtmandere-Alabama","data","raw","public","alabama")
-# 
-# districts <- read_sf(here("data","raw","public","alabama","districts.gpkg"))
-# 
-# setwd()
-# 
-# censusblocks <- read_sf("block_groups.gpkg")
+# here("Users","gushoward","Downloads","OR-gerrtmandere-Alabama","data","raw","public","alabama")
+
+districts <- read_sf(here("data","raw","public","alabama","districts.gpkg"))
+
+setwd()
+
+censusblocks <- read_sf("block_groups.gpkg")
 ```
 
 
@@ -295,7 +304,8 @@ districts21_join_ch <- districts21_join_bg |>
          absdiffPct = abs(diffPct))
 ```
 
-Compactness scores.
+Calculate compactness scores.
+To knit, will we need to replace `st_perimeter()` with `st_length(st_cast(st_cast(geom, "POLYGON"), "LINESTRING")`?
 
 ```{r}
 districts21_results <- districts21_join_ch |> 
@@ -398,3 +408,6 @@ The authors of this preregistration state that they completed this preregistrati
 This report is based upon the template for Reproducible and Replicable Research in Human-Environment and Geographical Sciences, DOI:[10.17605/OSF.IO/W29MQ](https://doi.org/10.17605/OSF.IO/W29MQ)
 
 # References
+
+
+
