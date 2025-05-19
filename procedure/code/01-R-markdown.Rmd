@@ -13,29 +13,14 @@ knit: (function(inputFile, encoding) {
 
 # Study metadata
 
-- `Title`: Voting Precincts 2020
-- `Abstract`: Alabama voting data for 2020 elections by precinct.
-- `Spatial Coverage`: Alabama
-- `Spatial Resolution`: Voting precincts
-- `Spatial Reference System`: EPSG 4269 NAD 1983 geographic coordinate system
-- `Temporal Coverage`: precincts used for tabulating the 2020 census
-- `Temporal Resolution`: annual election
-
-- `Title`: Voting Districts 2020
-- `Abstract`: Congressional Districts
-- `Spatial Coverage`: Alabama
-- `Spatial Resolution`: US Congressional Districts
-- `Spatial Reference System`: EPSG 3857 WGS 1984 Web Mercator projection
-- `Temporal Coverage`: Districts approved in 2023 for 2024
-- `Temporal Resolution`: annual election
-
-- `Title`: Block Groups 2020
-- `Abstract`: Vector polygon geopackage layer of 2020 Census Block Groups and demographic data
-- `Spatial Coverage`: Alabama
-- `Spatial Resolution`: Census Block Groups
-- `Spatial Reference System`: EPSG 4269 NAD 1983 geographic coordinate system
-- `Temporal Coverage`: 2020 Census
-- `Temporal Resolution`: 2020 Census
+Key Words: Compactness, Gerrymandering, Convex hull
+Subject: Social and Behavioral Sciences: Geography: Geographic Information Sciences
+Date: 02-18-2025
+Spatial Coverage: Alabama
+Spatial resolution: Census Block Groups
+Spatial reference System: EPSG: 4269 NAD 1983 GCS
+Temporal Coverage: 2020-2024
+Temporal Resolution: Decennial Census
 
 
 # Study design
@@ -45,43 +30,80 @@ This is an original study based on literature on gerrymandering metrics.
 It is an exploratory study to evaluate the usefulness of a new gerrymandering metric based on
 the convex hull of a congressional district and the representativeness inside the convex hull compared to the congressional district.
 
-Enumerate specific **hypotheses** to be tested or **research questions** to be investigated here, and specify the type of method, statistical test or model to be used on the hypothesis or question.
-
-# Materials and procedure
 
 ## Computational environment
 
-I Plan on using package.... for...
+I plan on using package the following packages: tidyverse - for general data manipulation, here - for file location, sf - for analyzing spatial data, tmap - to represent spatial data, tidycensus - for gathering census data, and kableExtra with R version 4.4.2.
 
 
 ```{r environment-setup, include = FALSE}
 # record all the packages you are using here
 # this includes any calls to library(), require(),
 # and double colons such as here::i_am()
-packages <- c("tidyverse", "here", "sf", "tmap", "tidycensus", "kableExtra")
+packages <- c("tidyverse", "here", "sf", "tmap", "tidycensus", "kableExtra", "lwgeom", "knitr", "htmltools", "markdown")
 
 # force all conflicts to become errors
 # if you load dplyr and use filter(), R has to guess whether you mean dplyr::filter() or stats::filter()
 # the conflicted package forces you to be explicit about this
 # disable at your own peril
 # https://conflicted.r-lib.org/
-require(conflicted)
+# require(conflicted)
 
 # load and install required packages
 # https://groundhogr.com/
+
+# if (!require(lwgeom)) {
+#   install.packages("lwgeom")
+#   require(lwgeom)
+# }
+# if (!require(tidyverse)) {
+#   install.packages("tidyverse")
+#   require(tidyverse)
+# }
+# if (!require(tidycensus)) {
+#   install.packages("tidycensus")
+#   require(tidycensus)
+# }
+# if (!require(tmap)) {
+#   install.packages("tmap")
+#   require(tmap)
+# }
 if (!require(groundhog)) {
   install.packages("groundhog")
   require(groundhog)
 }
-
+# 
 if (!require(here)) {
   install.packages("here")
   require(here)
 }
+# 
+# if (!require(sf)) {
+#   install.packages("sf")
+#   require(sf)
+# }
+# 
+# if (!require(markdown)) {
+#   install.packages("markdown")
+#   require(markdown)
+# }
+# 
+# if (!require(kableExtra)) {
+#   install.packages("kableExtra")
+#   require(kableExtra)
+# }
+# 
+# if (!require(knitr)) {
+#   install.packages("knitr")
+#   require(knitr)
+# }
 
 # this date will be used to determine the versions of R and your packages
 # it is best practice to keep R and its packages up to date
-groundhog.day <- "2025-02-01"
+```
+
+```{r}
+groundhog.day <- "2025-03-08"
 
 # this replaces any library() or require() calls
 groundhog.library(packages, groundhog.day)
@@ -92,10 +114,10 @@ groundhog.library(packages, groundhog.day)
 
 # record the R processing environment
 # alternatively, use devtools::session_info() for better results
-writeLines(
-  capture.output(sessionInfo()),
-  here("procedure", "environment", paste0("r-environment-", Sys.Date(), ".txt"))
-)
+# writeLines(
+#   capture.output(sessionInfo()),
+#   here("procedure", "environment", paste0("r-environment-", Sys.Date(), ".txt"))
+# )
 
 # save package citations
 knitr::write_bib(c(packages, "base"), file = here("software.bib"))
@@ -112,12 +134,38 @@ knitr::opts_chunk$set(
 
 ## Data Sources
 
-### Variables
+### Precincts
+- `Title`: Voting Precincts 2020
+- `Abstract`: Alabama voting data for 2020 elections by precinct.
+- `Spatial Coverage`: Alabama
+- `Spatial Resolution`: Voting precincts
+- `Spatial Reference System`: EPSG 4269 NAD 1983 geographic coordinate system
+- `Temporal Coverage`: precincts used for tabulating the 2020 census
+- `Temporal Resolution`: annual election
+
 Precincts 2020
 - VTDST20: Voting district ID
 - GEOID20: Unique geographic ID
 - G20PRETRU: Total vote for trump in 2020
 - G20PREBID: Total votes for Biden in 2020
+
+```{r, include = F}
+precincts20 <- st_read(here("data","raw","public","districts.gpkg"), layer = "precincts20")
+
+
+# includeMarkdown(here("data", "metadata", "precincts20.md"))
+```
+
+
+
+### Districts
+- `Title`: Voting Districts 2020
+- `Abstract`: Congressional Districts
+- `Spatial Coverage`: Alabama
+- `Spatial Resolution`: US Congressional Districts
+- `Spatial Reference System`: EPSG 3857 WGS 1984 Web Mercator projection
+- `Temporal Coverage`: Districts approved in 2023 for 2024
+- `Temporal Resolution`: annual election
 
 US Congressional districts
 - DISTRICT: US Congressional District Number
@@ -125,28 +173,28 @@ US Congressional districts
 - WHITE: total white population (2020 census)
 - BLACK: total Black or African American population (2020 census)
 
+```{r, include=FALSE}
+districts23 <- st_read(here("data","raw","public","districts.gpkg"), layer = "districts23")
+
+districts21 <- st_read(here("data","raw","public","districts.gpkg"), layer = "districts21")
+```
+
+
+### Block Groups
+- `Title`: Block Groups 2020
+- `Abstract`: Vector polygon geopackage layer of 2020 Census Block Groups and demographic data
+- `Spatial Coverage`: Alabama
+- `Spatial Resolution`: Census Block Groups
+- `Spatial Reference System`: EPSG 4269 NAD 1983 geographic coordinate system
+- `Temporal Coverage`: 2020 Census
+- `Temporal Resolution`: 2020 Census
 Block Groups
 - GEOID: code to uniquely identify tracts
 - P4_001N: Total Population, 18 years or older
 - P4_006N: Total: Not Hispanic or Latino, Population of one race, Black or African American alone, 18 years or older
 - P5_003N:Total institutionalized population in correctional facilities for adults, 18 years or older
 
-## precints 2020
-
-write code to read in precincts20.md into this document
-```{r}
-# # here("Users","gushoward","Downloads","OR-gerrtmandere-Alabama","data","raw","public","alabama")
-# 
-# districts <- read_sf(here("data","raw","public","alabama","districts.gpkg"))
-# 
-# setwd()
-# 
-# censusblocks <- read_sf("block_groups.gpkg")
-```
-
-
-## Census
-```{r}
+```{r, include=FALSE}
 census_metadata_file <- here("data", "metadata", "census2020pl_vars.csv")
 if(file.exists(census_metadata_file)){
   census2020pl_vars <- read.csv(census_metadata_file)
@@ -154,10 +202,6 @@ if(file.exists(census_metadata_file)){
   census2020pl_vars <- load_variables(2020, "pl")
   write.csv(census2020pl_vars, here("data", "metadata", "census2020pl_vars.csv"))
 }
-```
-
-### block group
-```{r message=FALSE, warning=FALSE}
 blockgroup_file <- here("data", "raw", "public", "block_groups.gpkg")
 
 # if the data is already downloaded, just load it
@@ -177,8 +221,46 @@ if(file.exists(blockgroup_file)){
 }
 ```
 
-### census variables
+transform block groups to WGS 1984
+
 ```{r}
+blockgroups <- st_transform(blockgroups, 4269)
+```
+
+Map the districts
+
+```{r}
+tmap_mode(mode = "plot")
+districts23map <- districts23 |> 
+  tm_shape() +
+  tm_polygons(fill_alpha = 0,
+              col = "blue") +
+  tm_labels(text = "DISTRICT",
+          col="blue",
+          bgcol = "white",
+          bgcol_alpha = 0.5,
+          on_surface = TRUE,
+          just = c("center", "center")
+          )
+
+districts23map
+```
+
+## Prior observations  
+
+At the time of this study pre-registration, the author had little prior knowledge of the geography of the study region with regards to the gerrymandering phenomena to be studied.
+This study is related to one prior study by the author, in which the compactness of Alabama's voting districts was calculated, as well as voting statistics in relation to race.
+
+## Bias and threats to validity
+
+MAUP and Scale may affect these results.
+
+Given the boundaries of this study are essential to the analysis, the Modifiable Areal Unit problem will certainly have relevant impacts. The constantly changing boundaries of voting precincts can impact both visualization of the data, as well as the analysis of it. The scale and shape of the units used has the potential to alter the data used in the study.
+
+# Data Transformations
+
+### Calculate Percent Black
+```{r percent black}
 black_vars <- census2020pl_vars |> 
   dplyr::filter(str_detect(name, "P3"),
                 str_detect(label, "Black")) |> 
@@ -187,27 +269,34 @@ black_vars <- census2020pl_vars |>
 black_vars |> kable()
 ```
 
-
-```{r, message=FALSE, warning=FALSE}
+```{r}
 blockgroups_calc <- blockgroups |> 
   rowwise() |> 
   mutate(Black = sum(c_across(all_of(black_vars$name)))) |> 
   ungroup() |> 
-  mutate(Total = P3_001N,
+  mutate(bgarea = st_area(geom),
+         Total = P3_001N,
          PctBlack = Black / Total * 100,
-         CheckPct = (Black + P3_003N) / Total * 100) |> 
-  # select(GEOID, Black, Total, PctBlack, CheckPct) |> 
-  # mutate(bgarea = st_area(geom))
-  select(GEOID, Black, Total, PctBlack, CheckPct)
+         CheckPct = (Black + P3_003N) / Total * 100
+         ) |> 
+  select(GEOID, bgarea, Black, Total, PctBlack, CheckPct)
 ```
 
-
+Save the results as `blockgroups_calc.gpkg`
 
 ```{r eval=FALSE}
 st_write(blockgroups_calc, 
          here("data", "derived", "public", "blockgroups_calc.gpkg"),
          append=FALSE)
 ```
+
+
+```{r}
+st_write(blockgroups_calc, 
+         here("data", "derived", "public", "blockgroups_calc.gpkg"),
+         append=FALSE)
+```
+
 
 Map the percentage of the population 18 or over that is Black or African American.
 ```{r}
@@ -224,38 +313,16 @@ tm_shape(blockgroups_calc) +
 blkgrp_black
 ```
 
-## Districts
-```{r error=FALSE}
-districts_file <- here("data", "raw", "public", "districts.gpkg")
-st_layers(districts_file)
-```
+## Analysis
 
-```{r}
-districts21 <- st_read(districts_file, layer = "districts21")
-```
+First, this is the total population, but we should care more about the voting age population.
+Second, we may want to categorize and calculate `BLACK` differently from the state of Alabama.
 
 
-```{r}
-districts21 <- districts21 |> st_transform(4269) |> 
-  mutate(pctBlack = round(BLACK / POPULATION * 100, 1))
-```
+Spatial indices in R: https://r-spatial.org/r/2017/06/22/spatial-index.html
 
-Districts & black population
-
-```{r}
-tmap_mode(mode = "view")
-blkgrp_black +
-  tm_shape(districts21_results) +
-  tm_polygons(col = "red",
-              fill_alpha = 0,
-              lwd = 2) +
-  tm_text("DISTRICT",
-          col = "red")
-```
-
-populations and bgs
 ```{r warning=FALSE}
-districts21_estimates <- st_intersection(blockgroups_calc, districts21) |> 
+districts23_estimates <- st_intersection(blockgroups_calc, districts23) |> 
   mutate(
     awTot = Total * as.numeric(st_area(geom) / bgarea),
     awBlack = Black * as.numeric(st_area(geom) / bgarea)
@@ -265,18 +332,21 @@ districts21_estimates <- st_intersection(blockgroups_calc, districts21) |>
   summarize(bgTotal = sum(awTot),
             bgBlack = sum(awBlack))
 
-districts21_join_bg <- districts21 |> 
-  left_join(districts21_estimates, by = "DISTRICT") |> 
+districts23_join_bg <- districts23 |> 
+  left_join(districts23_estimates, by = "DISTRICT") |> 
   mutate(pctBlackbg = round(bgBlack / bgTotal * 100, 1))
 ```
 
+Report results.
+We find very similar percentages of Black or African American people.
+
 ```{r}
-districts21_join_bg |> st_drop_geometry() |> kable()
+districts23_join_bg |> st_drop_geometry() |> kable()
 ```
 
-blck pct
+
 ```{r warning=FALSE}
-districts21_estimates <- st_intersection(blockgroups_calc, st_convex_hull(districts21)) |> 
+districts23_estimates <- st_intersection(blockgroups_calc, st_convex_hull(districts23)) |> 
   mutate(
     awTot = Total * as.numeric(st_area(geom) / bgarea),
     awBlack = Black * as.numeric(st_area(geom) / bgarea)
@@ -287,114 +357,95 @@ districts21_estimates <- st_intersection(blockgroups_calc, st_convex_hull(distri
             chBlack = sum(awBlack))
 ```
 
+Join convex hull estimates to Districts with blockgroup estimates.
+
 ```{r}
-districts21_join_ch <- districts21_join_bg |> 
-  left_join(districts21_estimates, by = "DISTRICT") |> 
+districts23_join_ch <- districts23_join_bg |> 
+  left_join(districts23_estimates, by = "DISTRICT") |> 
   mutate(pctBlackch = round(chBlack / chTotal * 100, 1),
          diffPct = pctBlackbg - pctBlackch,
          absdiffPct = abs(diffPct))
 ```
 
-Compactness scores.
+
 
 ```{r}
-districts21_results <- districts21_join_ch |> 
+districts23_results <- districts23_join_ch |> 
   mutate(
     darea = st_area(geom),
-    compact_shp = round( as.numeric((4 * pi * darea) / st_perimeter(geom)^2), 2)
-  )
-```
-
-Calculate compactness by comparing to the convex hull.
-
-```{r}
-districts21_results <- districts21_results |> 
-  mutate(
-    compact_hull = round( as.numeric(darea / st_area(st_convex_hull(geom))), 2)
-  )
-```
-
-Calculate compactness by comparing to the minimum bounding circle.
-This operation takes some time to run.
-
-```{r}
-districts21_results <- districts21_results |> 
-  mutate(
+    dperim = st_length(st_cast(geom, "MULTILINESTRING")),
+#    dperim2 = st_perimeter(geom),
+    compact_shp = round( as.numeric((4 * pi * darea) / dperim^2), 2),
+    compact_hull = round( as.numeric(darea / st_area(st_convex_hull(geom))), 2),
     compact_circ = round( as.numeric(darea / st_area(st_minimum_bounding_circle(geom))), 2)
   )
 ```
 
-### Plot representational difference against compactness
 
+
+
+# Results
+
+### Correlation matrix and small plots for gerrymandering indicators
 
 ```{r}
-districts21_results |> 
+districts23_results_cor <- districts23_results |> 
   st_drop_geometry() |> 
-  select(absdiffPct, compact_shp, compact_hull, compact_circ) |> 
-  cor() |> kable(digits = 2)
+  select(pctBlackbg,
+         diffPct,
+         absdiffPct,
+         compact_shp,
+         compact_hull,
+         compact_circ)
+
+districts23_results_cor |> cor() |> kable()
+```
+
+```{r}
+districts23_results_cor |> pairs()
 ```
 
 
+
+### Plot representational difference against compactness
+
+Scatterplot with (absolute) difference in representation on x axis and compactness on y axis.
+Plot the three different compactness scores simultaneously with different colors.
+Symbolize the districts with different shapes.
+
 ```{r}
-tm_shape(districts21_results) +
+districts23_results_plot <- districts23_results |> 
+  st_drop_geometry() |> 
+  select(DISTRICT, pctBlackbg, absdiffPct, compact_shp, compact_hull, compact_circ) |> 
+  pivot_longer(cols = starts_with("compact"))
+
+districts23_results_plot |> ggplot() +
+  aes(x = absdiffPct, y = value) +
+  geom_smooth(method="lm", col = "grey30") +
+  geom_label(aes(label = DISTRICT, fill = pctBlackbg)) +
+  scale_fill_distiller(type = "div", palette = "PRGn") +
+
+  facet_wrap(~name)
+```
+
+
+
+```{r}
+tm_shape(districts23_results) +
   tm_polygons(fill = "pctBlackbg") +
   tm_text("DISTRICT")
 ```
 
 
-
-
-## Prior observations  
-
-At the time of this study pre-registration, the author had little prior knowledge of the geography of the study region with regards to the gerrymandering phenomena to be studied.
-This study is related to one prior study by the author, in which the compactness of Alabama's voting districts was calculated, as well as voting statistics in relation to race.
-
-## Bias and threats to validity
-
-MAUP and Scale may affect these results.
-
-Given the boundaries of this study are essential to the analysis, the Modifiable Areal Unit problem will certainly have relevant impacts. The constantly changing boundaries of voting precincts can impact both visualization of the data, as well as the analysis of it. The scale and shape of the units used has the potential to alter the data used in the study.
-
-## Data transformations
-
-```{r}
-
-```
-
-
-Describe all data transformations planned to prepare data sources for analysis.
-This section should explain with the fullest detail possible how to transform data from the **raw** state at the time of acquisition or observation, to the pre-processed **derived** state ready for the main analysis.
-Including steps to check and mitigate sources of **bias** and **threats to validity**.
-The method may anticipate **contingencies**, e.g. tests for normality and alternative decisions to make based on the results of the test.
-More specifically, all the **geographic** and **variable** transformations required to prepare input data as described in the data and variables section above to match the study's spatio-temporal characteristics as described in the study metadata and study design sections.
-Visual workflow diagrams may help communicate the methodology in this section.
-
-Examples of **geographic** transformations include coordinate system transformations, aggregation, disaggregation, spatial interpolation, distance calculations, zonal statistics, etc.
-
-Examples of **variable** transformations include standardization, normalization, constructed variables, imputation, classification, etc.
-
-Be sure to include any steps planned to **exclude** observations with *missing* or *outlier* data, to **group** observations by *attribute* or *geographic* criteria, or to **impute** missing data or apply spatial or temporal **interpolation**.
-
-## Analysis
-
-Describe the methods of analysis that will directly test the hypotheses or provide results to answer the research questions.
-This section should explicitly define any spatial / statistical *models* and their *parameters*, including *grouping* criteria, *weighting* criteria, and *significance thresholds*.
-Also explain any follow-up analyses or validations.
-
-# Results
-
-Describe how results are to be presented.
-
 # Discussion
 
-Describe how the results are to be interpreted *vis a vis* each hypothesis or research question.
+Overall, there is a negative relationship between convex hull compactness and convex hull representational difference, as well as between minimum bounding circle compactness and convex hull difference. Notable exceptions include Districts 5 and 7. District 7 appears clearly gerrymandered—heavily packing African American voters—but the minimum bounding circle method fails to identify it as such. Conversely, District 5 is not meaningfully gerrymandered, yet the minimum bounding circle method flags it due to its elongated shape. Despite its length, District 5 remains relatively compact, which may explain the method's misclassification.
 
-# Integrity Statement
-
-The authors of this preregistration state that they completed this preregistration to the best of their knowledge and that no other preregistration exists pertaining to the same hypotheses and research.
-# Acknowledgements
+Compactness measures based on shape, convex hull, and minimum bounding circle generally correlate positively. However, District 5 is again an outlier in the relationship between shape-based and circle-based compactness.
 
 
-This report is based upon the template for Reproducible and Replicable Research in Human-Environment and Geographical Sciences, DOI:[10.17605/OSF.IO/W29MQ](https://doi.org/10.17605/OSF.IO/W29MQ)
+
+
+This report is based upon the template for Reproducible and Replicable Research in Human-Environment and Geographical Sciences, DOI: [10.17605/OSF.IO/W29MQ](https://doi.org/10.17605/OSF.IO/W29MQ)
 
 # References
