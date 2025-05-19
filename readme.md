@@ -4,7 +4,6 @@
 
 - Gus Howard,  augustush@middlebury.edu, @gushoward, Middlebury College
 
-\* Corresponding author and creator
 
 ## Abstract
 
@@ -26,14 +25,9 @@ We will then extend prior studies by calculating representativeness of the conve
 
 ## Related to
 
-- `OSF Project`:
-- `Pre-analysis Registration`:
-- `Post-analysis Report Registration`:
-- `Preprint`:
-- `Conference Presentation`:
-- `Publication`:
-- `Prior Study`:
-- `...`:
+- `Pre-analysis Registration`: [docs/report/analysis_plan.md](https://github.com/gushoward/OR-gerrymander-Alabama/blob/main/docs/report/analysis_plan.md)
+- `Post-analysis Report Registration`: file:///Users/gushoward/Downloads/GITHUB/OR-gerrymander-Alabama/docs/report/01-R-markdown.html
+
 
 ## Metadata for access
 
