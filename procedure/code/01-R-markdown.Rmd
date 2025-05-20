@@ -260,6 +260,7 @@ Given the boundaries of this study are essential to the analysis, the Modifiable
 # Data Transformations
 
 ### Calculate Percent Black
+
 ```{r percent black}
 black_vars <- census2020pl_vars |> 
   dplyr::filter(str_detect(name, "P3"),
@@ -269,7 +270,7 @@ black_vars <- census2020pl_vars |>
 black_vars |> kable()
 ```
 
-```{r}
+```{r, include = FALSE}
 blockgroups_calc <- blockgroups |> 
   rowwise() |> 
   mutate(Black = sum(c_across(all_of(black_vars$name)))) |> 
@@ -291,7 +292,7 @@ st_write(blockgroups_calc,
 ```
 
 
-```{r}
+```{r, include=FALSE}
 st_write(blockgroups_calc, 
          here("data", "derived", "public", "blockgroups_calc.gpkg"),
          append=FALSE)
@@ -299,6 +300,7 @@ st_write(blockgroups_calc,
 
 
 Map the percentage of the population 18 or over that is Black or African American.
+
 ```{r}
 blkgrp_black <- blockgroups_calc |> 
   tm_shape() + 
@@ -447,5 +449,3 @@ Compactness measures based on shape, convex hull, and minimum bounding circle ge
 
 
 This report is based upon the template for Reproducible and Replicable Research in Human-Environment and Geographical Sciences, DOI: [10.17605/OSF.IO/W29MQ](https://doi.org/10.17605/OSF.IO/W29MQ)
-
-# References
